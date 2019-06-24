@@ -5,32 +5,39 @@ from statistics import mean
 from mathutils import Vector
 
 DIMS = range(3)
-
+inp = None
 
 def processa_malla(me):
     pass
 
+def select(obj):
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.scene.objects.active = obj
+    obj.select = True
 
+def Instantiate(name):
+    obj = bpy.data.objects[name]
+    assert(obj != None)
+    select(obj)
+    bpy.ops.object.duplicate()
+    cpy = bpy.context.scene.objects.active
+    cpy.parent = inp
+
+    
 # Ok, so hoow this is gonna work is,
-# We're gonna have one object named "CGA_INPUT", one named "CGA_INST".
-# If they exist on start we operate on them, if not we create them and then ask for a restart (TODO).
-# We operate on their children as the necesary input to the algorithm.
+# We're gonna have one object named "CGA_INPUT"
+# If it exist on start we operate on it, if not we create  and ask for a restart (TODO).
+# We operate on children as the necesary input to the algorithm.
+# INderesting, blender duplicate operation has problems with hierarchies. Recommend to only do simple objects.
 def main():
+    global inp
     # Retrieve the active object (the last one selected)
     inp = bpy.data.objects["CGA_INPUT"]
     assert(inp != None)
     inst = bpy.data.objects["CGA_INST"]
     assert(inst != None)
 
-    bpy.ops.mesh.primitive_cube_add()
-    cube = bpy.context.object
-    assert(cube != None)
-    bpy.ops.mesh.primitive_torus_add()
-    torus = bpy.context.object
-    assert(torus != None)
-
-    cube.parent = inp
-    torus.parent = inst
+    Instantiate("Cube");
 
     # Get current time
     t = time()
