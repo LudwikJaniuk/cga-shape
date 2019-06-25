@@ -13,40 +13,44 @@ from mathutils import Vector
 
 #####################################################
 ### RULES AREA
-def define_rules():
-    def rule1(o):
-        Nonterminal("VV")
-        Translate(Vector((8,0,0)))
-        Nonterminal("VV")
-    rule1.pred = "koob"
-    RULE(rule1)
-
-    def rule11(o):
-        Nonterminal("V")
-        Translate(Vector((0,8,0)))
-        Nonterminal("V")
-    rule11.pred = "VV"
-    RULE(rule11)
-
-    def rule2(o):
-        Push()
-        Translate(Vector((1,0,0)))
-        Instantiate("Cube")
-        Pop()
-        Push()
-        Translate(Vector((-1,0,0)))
-        Instantiate("Cube")
-        Pop()
-        Push()
-        Translate(Vector((0,1,0)))
-        Instantiate("Cube")
-        Pop()
-        Push()
-        Translate(Vector((0,-1,0)))
-        Instantiate("Cube")
-        Pop()
-    rule2.pred = "V"
-    RULE(rule2)
+rules = [
+    {
+        "id": "rule1",
+        "pred": "koob",
+        "effect": lambda o : [
+            (Nonterminal, "VV"),
+            (Translate, Vector((8,0,0))),
+            (Nonterminal, "VV") ]
+    }, {
+        "id": "rule2",
+        "pred": "VV",
+        "effect": lambda o : [
+            (Nonterminal, "V"),
+            (Translate, Vector((0,8,0))),
+            (Nonterminal, "V") ]
+    }, {
+        "id": "rule3",
+        "pred": "V",
+        "effect": lambda o : [
+        Push,
+        (Translate, Vector((1,0,0))),
+        (Instantiate, "Cube"),
+        Pop,
+        Push,
+        (Translate, Vector((-1,0,0))),
+        (Instantiate, "Cube"),
+        Pop,
+        Push,
+        (Translate, Vector((0,1,0))),
+        (Instantiate, "Cube"),
+        Pop,
+        Push,
+        (Translate, Vector((0,-1,0))),
+        (Instantiate, "Cube"),
+        Pop, 
+        ]
+    }
+]
 
 ### END OF RULES
 #####################################################
@@ -54,16 +58,12 @@ def define_rules():
 DIMS = range(3)
 inp = None
 inac = None
-rules = []
 
 state = {
         "translation": Vector((0,0,0))
 }
 
 stack = []
-
-def RULE(r):
-    rules.append(r)
 
 def new_obj(name):
     o = bpy.data.objects.new(name, None)
@@ -135,29 +135,46 @@ def Pop():
 def Translate(dCoords):
     state["translation"] += dCoords
 
+def execute(instructions):
+    for inst in instructions:
+        if callable(inst):
+            inst()
+            continue
+        assert(type(inst) == tuple)
+
+        l = len(inst)
+        assert(l != 0)
+        if l == 1:
+            inst[0]()
+        if l == 2:
+            inst[0](inst[1])
+        if l == 3:
+            inst[0](inst[1], inst[2])
+        if l == 4:
+            inst[0](inst[1], inst[2], inst[3])
+
 def ApplyRule(r, obj):
     global inp
     global inac
     global state
     assert(obj.parent == inp)
-    assert(get_symbol(obj) == r.pred)
+    assert(get_symbol(obj) == r["pred"])
 
     Push()
     state = extract_state(obj)
     print("STATE: ", state)
-    r(obj)
+    instructions = r["effect"](obj)
+    execute(instructions)
     Pop()
+
     obj.parent = inac
-
-
-
 
 def ApplyOne():
     global inp
     global inac
     global rules
     for r in rules:
-        p = r.pred
+        p = r["pred"]
         print("RUle pred: " + p)
         for o in inp.children:
             symb = get_symbol(o)
@@ -204,7 +221,7 @@ def main():
     global inp
     if not prepare():
         return
-    define_rules()
+    #define_rules()
 
     # Get current time
     t = time()
