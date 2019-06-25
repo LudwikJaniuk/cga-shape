@@ -5,6 +5,25 @@ from time import time
 from statistics import mean
 from mathutils import Vector
 
+
+#####################################################
+### RULES AREA
+def rule1(o):
+    Push()
+    Instantiate("Cube");
+    Translate(Vector((3,0,0)))
+    Instantiate("Cube");
+    Pop()
+    Translate(Vector((0,3,0)))
+    Instantiate("Cube");
+rule1.src = "koob"
+
+
+
+rules = [rule1]
+### END OF RULES
+#####################################################
+
 DIMS = range(3)
 inp = None
 
@@ -13,9 +32,6 @@ state = {
 }
 
 stack = []
-
-def processa_malla(me):
-    pass
 
 def select(obj):
     bpy.ops.object.select_all(action='DESELECT')
@@ -46,6 +62,18 @@ def Pop():
 def Translate(dCoords):
     state["translation"] += dCoords
 
+def ApplyOne():
+    global inp
+    global rules
+    for r in rules:
+        s = r.src
+        for o in inp.children:
+            if o.name == s:
+                r(o)
+                return True;
+            else:
+                print(o.name)
+    return False;
 
     
 # Ok, so hoow this is gonna work is,
@@ -59,27 +87,12 @@ def main():
     inp = bpy.data.objects["CGA_INPUT"]
     assert(inp != None)
 
-    Push()
-    Instantiate("Cube");
-    Translate(Vector((3,0,0)))
-    Instantiate("Cube");
-    Translate(Vector((3,0,0)))
-    Instantiate("Cube");
-    Pop()
-    print(state["translation"].x)
-    assert(state["translation"].x == 0)
-    Translate(Vector((0,3,0)))
-    Instantiate("Cube");
-    Translate(Vector((3,0,0)))
-    Instantiate("Cube");
-    Translate(Vector((3,0,0)))
-    Instantiate("Cube");
 
     # Get current time
     t = time()
 
     # Function that does all the work
-    processa_malla()
+    assert(ApplyOne())
 
     # Uncomment to do animation
     # precompute_for_animation(mesh)
