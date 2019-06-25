@@ -6,8 +6,14 @@ from statistics import mean
 from mathutils import Vector
 
 # TODO
-# Other transforms
+# Rotate
+# Roofs
+# Scale
+# subdivision
+# Comp
+# Extrusion (implicit?)
 # Textures
+# Relative size values
 
 
 #####################################################
