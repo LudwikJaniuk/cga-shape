@@ -15,35 +15,35 @@ from mathutils import Vector
 ### RULES AREA
 def define_rules():
     def rule1(o):
-        Nonterminal("VV");
+        Nonterminal("VV")
         Translate(Vector((8,0,0)))
-        Nonterminal("VV");
+        Nonterminal("VV")
     rule1.pred = "koob"
     RULE(rule1)
 
     def rule11(o):
-        Nonterminal("V");
+        Nonterminal("V")
         Translate(Vector((0,8,0)))
-        Nonterminal("V");
+        Nonterminal("V")
     rule11.pred = "VV"
     RULE(rule11)
 
     def rule2(o):
         Push()
         Translate(Vector((1,0,0)))
-        Instantiate("Cube");
+        Instantiate("Cube")
         Pop()
         Push()
         Translate(Vector((-1,0,0)))
-        Instantiate("Cube");
+        Instantiate("Cube")
         Pop()
         Push()
         Translate(Vector((0,1,0)))
-        Instantiate("Cube");
+        Instantiate("Cube")
         Pop()
         Push()
         Translate(Vector((0,-1,0)))
-        Instantiate("Cube");
+        Instantiate("Cube")
         Pop()
     rule2.pred = "V"
     RULE(rule2)
@@ -89,11 +89,11 @@ def duplicate(obj):
     return get_active()
 
 def set_symbol(obj, s):
-    obj["symbol"] = s;
+    obj["symbol"] = s
 
 def get_symbol(obj):
-    assert(obj["symbol"]);
-    return obj["symbol"];
+    assert(obj["symbol"])
+    return obj["symbol"]
 
 def apply_state(obj):
     global state
@@ -107,8 +107,8 @@ def extract_state(obj):
 def Nonterminal(name):
     global inp
     global state
-    o = new_obj("symbol");
-    set_symbol(o, name);
+    o = new_obj("symbol")
+    set_symbol(o, name)
     apply_state(o)
     o.parent = inp
 
@@ -164,10 +164,10 @@ def ApplyOne():
             print("Child symbol: " + symb)
             if symb == p:
                 ApplyRule(r, o)
-                return True;
+                return True
             else:
                 print(o.name)
-    return False;
+    return False
 
 def prepare():
     global inp
