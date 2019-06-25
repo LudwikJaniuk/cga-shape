@@ -1,14 +1,13 @@
 import bpy
 import bmesh
 import copy
+from math import radians
 from time import time
 from statistics import mean
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
 # TODO
-# Rotate
 # Roofs
-# Scale
 # subdivision
 # Comp
 # Extrusion (implicit?)
@@ -28,47 +27,21 @@ rules = [
             (Instantiate, "Cube"),
             Pop,
             Push,
-            (Translate, Vector((-3,0,0))),
+            (Translate, Vector((-2,0,0))),
             (Instantiate, "Cube"),
             Pop,
+            (RotZ, 45),
             Push,
-            (Translate, Vector((0,3,0))),
+            (Translate, Vector((1,3,0))),
             (Instantiate, "Cube"),
             Pop,
+            (Scale, Vector((1, 1, 2))),
             Push,
             (Translate, Vector((0,-3,0))),
             (Instantiate, "Cube"),
             Pop,
             ],
         "cond": lambda o : o.location.x > 5
-#    }, {
-#        "id": "rule2",
-#        "pred": "VV",
-#        "effect": lambda o : [
-#            (Nonterminal, "V"),
-#            (Translate, Vector((0,8,0))),
-#            (Nonterminal, "V") ]
-#    }, {
-#        "id": "rule3",
-#        "pred": "V",
-#        "effect": lambda o : [
-#        Push,
-#        (Translate, Vector((1,0,0))),
-#        (Instantiate, "Cube"),
-#        Pop,
-#        Push,
-#        (Translate, Vector((-1,0,0))),
-#        (Instantiate, "Cube"),
-#        Pop,
-#        Push,
-#        (Translate, Vector((0,1,0))),
-#        (Instantiate, "Cube"),
-#        Pop,
-#        Push,
-#        (Translate, Vector((0,-1,0))),
-#        (Instantiate, "Cube"),
-#        Pop, 
-#        ]
     }
 ]
 
@@ -80,7 +53,12 @@ inp = None
 inac = None
 
 state = {
-        "translation": Vector((0,0,0))
+        "translation": Vector((0,0,0)),
+        "rot_x": 0,
+        "rot_y": 0, 
+        "rot_z": 0,
+        "scale": Vector((1,1,1)),
+        "transform": Matrix()
 }
 
 stack = []
@@ -117,11 +95,11 @@ def get_symbol(obj):
 
 def apply_state(obj):
     global state
-    obj.location = state["translation"]
+    obj.matrix_world = copy.deepcopy(state["transform"])
 
 def extract_state(obj):
     return {
-            "translation": copy.deepcopy(obj.location)
+            "transform": copy.deepcopy(obj.matrix_world)
     }
 
 def Nonterminal(name):
@@ -153,7 +131,24 @@ def Pop():
 
 # Accepts a vector
 def Translate(dCoords):
-    state["translation"] += dCoords
+    d = Matrix.Translation(dCoords)
+    state["transform"] *= d
+
+def RotX(delta):
+    d = Matrix.Rotation(radians(delta), 4, "X")
+    state["transform"] *= d
+
+def RotY(delta):
+    d = Matrix.Rotation(radians(delta), 4, "Y")
+    state["transform"] *= d
+
+def RotZ(delta):
+    d = Matrix.Rotation(radians(delta), 4, "Z")
+    state["transform"] *= d
+
+def Scale(mult):
+    d = Matrix.Scale(mult[0], 4, Vector((1, 0, 0))) * Matrix.Scale(mult[1], 4, Vector((0, 1, 0))) * Matrix.Scale(mult[2], 4, Vector((0, 0, 1)))
+    state["transform"] *= d
 
 def execute(instructions):
     for inst in instructions:
@@ -217,13 +212,11 @@ def prepare():
     if(inp == None):
         new_obj("CGA_INPUT")
         scene_was_prepped = False
-        return False
 
     inac = get_by_name("CGA_INACTIVE")
     if(inac == None):
         new_obj("CGA_INACTIVE")
         scene_was_prepped = False
-        return False
 
     if not scene_was_prepped:
         return False
@@ -241,7 +234,6 @@ def main():
     global inp
     if not prepare():
         return
-    #define_rules()
 
     # Get current time
     t = time()
