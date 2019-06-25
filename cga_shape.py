@@ -7,13 +7,13 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
-# Relative size values
-#   Relativity seems to be computed as all the relative ones share the same cake, after the absoutes have eaten
 # Repeat rule
 # Roofs
 # Comp
 # Extrusion (implicit?)
 # Textures
+# Parametric primitives? 
+#   Because see default cube is actually size 2...
     
 
 # NOTES
@@ -38,7 +38,7 @@ rules = [
         "id": "rule1",
         "pred": "koob",
         "effect": lambda o : [
-            (Subdiv, "Y", [1,2,3,4,5], ["F", "F", "F", "F", "F"]),
+            (Subdiv, "Y", [r(1),1, 1, r(1)], ["F", "F", "F", "F"]),
 #            (Symbol, "V", { "level" : 0 }),
             ]
     }, {
@@ -67,6 +67,8 @@ rules = [
         "id": "rule3",
         "pred": "F",
         "effect": lambda o : [
+            (Translate, get_size(o)/2),
+            (Scale, get_size(o)),
             (Instantiate, "Cube"),
             ]
     }
@@ -90,6 +92,9 @@ state = {
 }
 
 stack = []
+
+def r(n):
+    return (n, "r")
 
 def GET(o, param_name):
     # CGA user values
@@ -212,14 +217,41 @@ def Scale(mult):
 def Size(val):
     state["size"] = copy.deepcopy(val)
 
+def absolutize(sizes, dim):
+    sTot = state["size"][dim]
+    print("ABSOL")
+    print(sTot)
+    print(sizes)
+    absSum = 0
+    rSum = 0
+    for size in sizes:
+        if type(size) == tuple:
+            assert(size[1] == "r")
+            rSum += size[0]
+        else:
+            absSum += size
+
+    for i in range(len(sizes)):
+        s = sizes[i] 
+        if type(s) == tuple:
+            sizes[i] = s[0]*(sTot - absSum)/rSum
+    
+    print(sizes)
+    return sizes
+
+
 def Subdiv(axis, sizes, names):
     dim = d_l2n(axis)
     assert(len(sizes) == len(names))
+
+    sizes = absolutize(sizes, dim)
+
     cum_size = 0
     for i in range(len(sizes)):
         size = sizes[i]
         name = names[i]
 
+        Push()
         curr_size = copy.deepcopy(state["size"])
         curr_size[dim] = size
         Size(curr_size)
@@ -229,6 +261,7 @@ def Subdiv(axis, sizes, names):
         Translate(t)
 
         Symbol(name, {})
+        Pop()
 
         cum_size += size
 
