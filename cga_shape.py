@@ -5,27 +5,56 @@ from time import time
 from statistics import mean
 from mathutils import Vector
 
+# TODO
+# COnditionals
+# Other transforms
+# Textures
+
 
 #####################################################
 ### RULES AREA
-def rule1(o):
-    Push()
-    Instantiate("Cube");
-    Translate(Vector((3,0,0)))
-    Instantiate("Cube");
-    Pop()
-    Translate(Vector((0,3,0)))
-    Instantiate("Cube");
-rule1.src = "koob"
+def define_rules():
+    def rule1(o):
+        Nonterminal("VV");
+        Translate(Vector((8,0,0)))
+        Nonterminal("VV");
+    rule1.pred = "koob"
+    RULE(rule1)
 
+    def rule11(o):
+        Nonterminal("V");
+        Translate(Vector((0,8,0)))
+        Nonterminal("V");
+    rule11.pred = "VV"
+    RULE(rule11)
 
+    def rule2(o):
+        Push()
+        Translate(Vector((1,0,0)))
+        Instantiate("Cube");
+        Pop()
+        Push()
+        Translate(Vector((-1,0,0)))
+        Instantiate("Cube");
+        Pop()
+        Push()
+        Translate(Vector((0,1,0)))
+        Instantiate("Cube");
+        Pop()
+        Push()
+        Translate(Vector((0,-1,0)))
+        Instantiate("Cube");
+        Pop()
+    rule2.pred = "V"
+    RULE(rule2)
 
-rules = [rule1]
 ### END OF RULES
 #####################################################
 
 DIMS = range(3)
 inp = None
+inac = None
+rules = []
 
 state = {
         "translation": Vector((0,0,0))
@@ -33,18 +62,62 @@ state = {
 
 stack = []
 
+def RULE(r):
+    rules.append(r)
+
+def new_obj(name):
+    o = bpy.data.objects.new(name, None)
+    bpy.context.scene.objects.link(o)
+    return o
+
+def get_by_name(name):
+    if name in bpy.data.objects:
+        return bpy.data.objects[name]
+    return None
+
 def select(obj):
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.scene.objects.active = obj
     obj.select = True
 
-def Instantiate(name):
-    obj = bpy.data.objects[name]
-    assert(obj != None)
+def get_active():
+    return bpy.context.scene.objects.active
+
+def duplicate(obj):
     select(obj)
     bpy.ops.object.duplicate()
-    cpy = bpy.context.scene.objects.active
-    cpy.location = state["translation"]
+    return get_active()
+
+def set_symbol(obj, s):
+    obj["symbol"] = s;
+
+def get_symbol(obj):
+    assert(obj["symbol"]);
+    return obj["symbol"];
+
+def apply_state(obj):
+    global state
+    obj.location = state["translation"]
+
+def extract_state(obj):
+    return {
+            "translation": copy.deepcopy(obj.location)
+    }
+
+def Nonterminal(name):
+    global inp
+    global state
+    o = new_obj("symbol");
+    set_symbol(o, name);
+    apply_state(o)
+    o.parent = inp
+
+def Instantiate(name):
+    obj = get_by_name(name)
+    assert(obj != None)
+    cpy = duplicate(obj)
+    apply_state(cpy)
+    set_symbol(cpy, "TERMINAL")
     cpy.parent = inp
 
 def Push():
@@ -62,20 +135,66 @@ def Pop():
 def Translate(dCoords):
     state["translation"] += dCoords
 
+def ApplyRule(r, obj):
+    global inp
+    global inac
+    global state
+    assert(obj.parent == inp)
+    assert(get_symbol(obj) == r.pred)
+
+    Push()
+    state = extract_state(obj)
+    print("STATE: ", state)
+    r(obj)
+    Pop()
+    obj.parent = inac
+
+
+
+
 def ApplyOne():
     global inp
+    global inac
     global rules
     for r in rules:
-        s = r.src
+        p = r.pred
+        print("RUle pred: " + p)
         for o in inp.children:
-            if o.name == s:
-                r(o)
+            symb = get_symbol(o)
+            print("Child symbol: " + symb)
+            if symb == p:
+                ApplyRule(r, o)
                 return True;
             else:
                 print(o.name)
     return False;
 
-    
+def prepare():
+    global inp
+    global inac
+    global state
+
+    scene_was_prepped = True
+
+    inp = get_by_name("CGA_INPUT")
+    if(inp == None):
+        new_obj("CGA_INPUT")
+        scene_was_prepped = False
+        return False
+
+    inac = get_by_name("CGA_INACTIVE")
+    if(inac == None):
+        new_obj("CGA_INACTIVE")
+        scene_was_prepped = False
+        return False
+
+    if not scene_was_prepped:
+        return False
+
+    for c in inp.children:
+        set_symbol(c, c.name)
+    return True
+
 # Ok, so hoow this is gonna work is,
 # We're gonna have one object named "CGA_INPUT"
 # If it exist on start we operate on it, if not we create  and ask for a restart (TODO).
@@ -83,16 +202,18 @@ def ApplyOne():
 # INderesting, blender duplicate operation has problems with hierarchies. Recommend to only do simple objects.
 def main():
     global inp
-    # Retrieve the active object (the last one selected)
-    inp = bpy.data.objects["CGA_INPUT"]
-    assert(inp != None)
-
+    if not prepare():
+        return
+    define_rules()
 
     # Get current time
     t = time()
 
     # Function that does all the work
-    assert(ApplyOne())
+    i = 0
+    while ApplyOne():
+        i += 1
+        print(i)
 
     # Uncomment to do animation
     # precompute_for_animation(mesh)
