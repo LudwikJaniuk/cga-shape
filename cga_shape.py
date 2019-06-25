@@ -7,14 +7,6 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
-# size following in all scope changes
-# Set size of scope?
-#   WIll need size in STSATE
-#   Could deactivate scale rule to avoid confunsion
-#   This has no effect on instantiate (does it?) don't want to think about fitting stuff in the scope
-#   Should be able to use size coords as parameter
-#   Seems subdiv will use ut heavily so let's gor for  that
-# Subdivision
 # Relative size values
 #   Relativity seems to be computed as all the relative ones share the same cake, after the absoutes have eaten
 # Repeat rule
@@ -26,6 +18,11 @@ from mathutils import Vector, Matrix
 
 # NOTES
 # Subdiv seems like it's just syntax sugar around applying translations and scalings
+#   WIll need size in STSATE
+#   Could deactivate scale rule to avoid confunsion
+#   This has no effect on instantiate (does it?) don't want to think about fitting stuff in the scope
+#   Should be able to use size coords as parameter
+#   Seems subdiv will use ut heavily so let's gor for  that
 
 # "To go back to higher dimensions we can simply use the size command S with a non-zero 
 # value in the correspond- ing dimension (e.g. to extrude a face shape along its 
