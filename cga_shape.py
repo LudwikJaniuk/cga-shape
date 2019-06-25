@@ -18,37 +18,51 @@ rules = [
         "id": "rule1",
         "pred": "koob",
         "effect": lambda o : [
-            (Nonterminal, "VV"),
-            (Translate, Vector((8,0,0))),
-            (Nonterminal, "VV") ]
-    }, {
-        "id": "rule2",
-        "pred": "VV",
-        "effect": lambda o : [
-            (Nonterminal, "V"),
-            (Translate, Vector((0,8,0))),
-            (Nonterminal, "V") ]
-    }, {
-        "id": "rule3",
-        "pred": "V",
-        "effect": lambda o : [
-        Push,
-        (Translate, Vector((1,0,0))),
-        (Instantiate, "Cube"),
-        Pop,
-        Push,
-        (Translate, Vector((-1,0,0))),
-        (Instantiate, "Cube"),
-        Pop,
-        Push,
-        (Translate, Vector((0,1,0))),
-        (Instantiate, "Cube"),
-        Pop,
-        Push,
-        (Translate, Vector((0,-1,0))),
-        (Instantiate, "Cube"),
-        Pop, 
-        ]
+            Push,
+            (Translate, Vector((3,0,0))),
+            (Instantiate, "Cube"),
+            Pop,
+            Push,
+            (Translate, Vector((-3,0,0))),
+            (Instantiate, "Cube"),
+            Pop,
+            Push,
+            (Translate, Vector((0,3,0))),
+            (Instantiate, "Cube"),
+            Pop,
+            Push,
+            (Translate, Vector((0,-3,0))),
+            (Instantiate, "Cube"),
+            Pop,
+            ]
+#    }, {
+#        "id": "rule2",
+#        "pred": "VV",
+#        "effect": lambda o : [
+#            (Nonterminal, "V"),
+#            (Translate, Vector((0,8,0))),
+#            (Nonterminal, "V") ]
+#    }, {
+#        "id": "rule3",
+#        "pred": "V",
+#        "effect": lambda o : [
+#        Push,
+#        (Translate, Vector((1,0,0))),
+#        (Instantiate, "Cube"),
+#        Pop,
+#        Push,
+#        (Translate, Vector((-1,0,0))),
+#        (Instantiate, "Cube"),
+#        Pop,
+#        Push,
+#        (Translate, Vector((0,1,0))),
+#        (Instantiate, "Cube"),
+#        Pop,
+#        Push,
+#        (Translate, Vector((0,-1,0))),
+#        (Instantiate, "Cube"),
+#        Pop, 
+#        ]
     }
 ]
 
