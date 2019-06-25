@@ -6,7 +6,6 @@ from statistics import mean
 from mathutils import Vector
 
 # TODO
-# COnditionals
 # Other transforms
 # Textures
 
@@ -34,7 +33,8 @@ rules = [
             (Translate, Vector((0,-3,0))),
             (Instantiate, "Cube"),
             Pop,
-            ]
+            ],
+        "cond": lambda o : o.location.x > 5
 #    }, {
 #        "id": "rule2",
 #        "pred": "VV",
@@ -193,7 +193,7 @@ def ApplyOne():
         for o in inp.children:
             symb = get_symbol(o)
             print("Child symbol: " + symb)
-            if symb == p:
+            if symb == p and r["cond"](o):
                 ApplyRule(r, o)
                 return True
             else:
