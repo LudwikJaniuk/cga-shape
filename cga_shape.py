@@ -7,12 +7,25 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
+# Set size of scope?
+# Subdivision
+# Relative size values
+#   Relativity seems to be computed as all the relative ones share the same cake, after the absoutes have eaten
+# Repeat rule
 # Roofs
-# subdivision
 # Comp
 # Extrusion (implicit?)
 # Textures
-# Relative size values
+    
+
+# NOTES
+# Subdiv seems like it's just syntax sugar around applying translations and scalings
+
+# "To go back to higher dimensions we can simply use the size command S with a non-zero 
+# value in the correspond- ing dimension (e.g. to extrude a face shape along its 
+# normal and therefore transforming it into a volumetric shape)."
+#   So setting absolute size instead of scale might be valuable...
+#   They're also necessary for then computing relative values off of them
 
 
 #####################################################
