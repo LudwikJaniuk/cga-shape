@@ -7,13 +7,14 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
-# Repeat rule
 # Roofs
 # Comp
 # Extrusion (implicit?)
 # Textures
 # Parametric primitives? 
 #   Because see default cube is actually size 2...
+# Data in the subdivs?
+# Document size stuff
     
 
 # NOTES
@@ -38,7 +39,8 @@ rules = [
         "id": "rule1",
         "pred": "koob",
         "effect": lambda o : [
-            (Subdiv, "Y", [r(1),1, 1, r(1)], ["F", "F", "F", "F"]),
+            #(Subdiv, "Y", [r(1),1, 1, r(1)], ["F", "F", "F", "F"]),
+            (Repeat, "Y", 3, "F"),
 #            (Symbol, "V", { "level" : 0 }),
             ]
     }, {
@@ -264,6 +266,20 @@ def Subdiv(axis, sizes, names):
         Pop()
 
         cum_size += size
+
+def Repeat(axis, size, name):
+    dim = d_l2n(axis)
+    sTot = state["size"][dim]
+    reps = int(sTot/size)
+
+    sizes = []
+    names = []
+    for i in range(reps):
+        sizes.append(size)
+        names.append(name)
+
+    Subdiv(axis, sizes, names)
+
 
 def execute(instructions):
     for inst in instructions:
