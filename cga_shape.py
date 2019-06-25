@@ -7,18 +7,13 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
-# Symbol parameters
-# cga insurance
+# size following in all scope changes
 # Set size of scope?
-#   WIll need size in scope
+#   WIll need size in STSATE
 #   Could deactivate scale rule to avoid confunsion
 #   This has no effect on instantiate (does it?) don't want to think about fitting stuff in the scope
 #   Should be able to use size coords as parameter
-#   For what?
-#   "fac(h) : h > 9 ; floor(h/3) floor(h/3) floor(h/3)"
-#   Seems symbols need to have parameters, and that does make sense
-#   would like concrete example...
-#   Fractals! Parameters going down for iteration control wihtout stupid string workarounds
+#   Seems subdiv will use ut heavily so let's gor for  that
 # Subdivision
 # Relative size values
 #   Relativity seems to be computed as all the relative ones share the same cake, after the absoutes have eaten
@@ -46,7 +41,8 @@ rules = [
         "id": "rule1",
         "pred": "koob",
         "effect": lambda o : [
-            (Symbol, "V", { "level" : 2 }),
+            (Subdiv, "Y", [1,2,3,4,5], ["F", "F", "F", "F", "F"]),
+#            (Symbol, "V", { "level" : 0 }),
             ]
     }, {
         "id": "rule2",
@@ -72,8 +68,7 @@ rules = [
             ]
     }, {
         "id": "rule3",
-        "pred": "V",
-        "cond": lambda o : GET(o, "level") == 0,
+        "pred": "F",
         "effect": lambda o : [
             (Instantiate, "Cube"),
             ]
@@ -93,13 +88,15 @@ state = {
         "rot_y": 0, 
         "rot_z": 0,
         "scale": Vector((1,1,1)),
-        "transform": Matrix()
+        "transform": Matrix(),
+        "size": Vector((1,1,1)),
 }
 
 stack = []
 
 def GET(o, param_name):
-    name_safe = "CGA_" + param_name
+    # CGA user values
+    name_safe = "CGAU_" + param_name
     return o[name_safe]
 
 def new_obj(name):
@@ -126,19 +123,39 @@ def duplicate(obj):
     return get_active()
 
 def set_symbol(obj, s):
+    print(s)
+    assert(type(s) == str)
     obj["symbol"] = s
 
 def get_symbol(obj):
     assert(obj["symbol"])
     return obj["symbol"]
 
+def set_size(obj, size):
+    obj["CGA_size"] = [size.x, size.y, size.z]
+
+def get_size(obj):
+    assert(obj["CGA_size"])
+    return Vector(obj["CGA_size"])
+
+def d_l2n(letter):
+    if letter == "X":
+            return 0
+    if letter == "Y":
+            return 1
+    if letter == "Z":
+            return 2
+    assert(False)
+
 def apply_state(obj):
     global state
     obj.matrix_world = copy.deepcopy(state["transform"])
+    set_size(obj, copy.deepcopy(state["size"]))
 
 def extract_state(obj):
     return {
-            "transform": copy.deepcopy(obj.matrix_world)
+            "transform": copy.deepcopy(obj.matrix_world),
+            "size" : get_size(obj)
     }
 
 def Symbol(name, data):
@@ -149,7 +166,7 @@ def Symbol(name, data):
     if data:
         for k, v in data.items():
             assert(k != "symbol")
-            k_safe = "CGA_" + k
+            k_safe = "CGAU_" + k
             o[k_safe] = v
 
     apply_state(o)
@@ -195,6 +212,29 @@ def Scale(mult):
     d = Matrix.Scale(mult[0], 4, Vector((1, 0, 0))) * Matrix.Scale(mult[1], 4, Vector((0, 1, 0))) * Matrix.Scale(mult[2], 4, Vector((0, 0, 1)))
     state["transform"] *= d
 
+def Size(val):
+    state["size"] = copy.deepcopy(val)
+
+def Subdiv(axis, sizes, names):
+    dim = d_l2n(axis)
+    assert(len(sizes) == len(names))
+    cum_size = 0
+    for i in range(len(sizes)):
+        size = sizes[i]
+        name = names[i]
+
+        curr_size = copy.deepcopy(state["size"])
+        curr_size[dim] = size
+        Size(curr_size)
+
+        t = Vector((0,0,0))
+        t[dim] = cum_size
+        Translate(t)
+
+        Symbol(name, {})
+
+        cum_size += size
+
 def execute(instructions):
     for inst in instructions:
         if callable(inst):
@@ -235,10 +275,10 @@ def ApplyOne():
     global rules
     for r in rules:
         p = r["pred"]
-        print("RUle pred: " + p)
+        print("RUle pred: ", p)
         for o in inp.children:
             symb = get_symbol(o)
-            print("Child symbol: " + symb)
+            print("Child symbol: ", symb)
             if symb == p and (("cond" not in r) or r["cond"](o)):
                 ApplyRule(r, o)
                 return True
@@ -268,6 +308,7 @@ def prepare():
 
     for c in inp.children:
         set_symbol(c, c.name)
+        set_size(c, Vector((10, 10, 10)))
     return True
 
 # Ok, so hoow this is gonna work is,
