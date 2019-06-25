@@ -7,7 +7,18 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
+# Symbol parameters
+# cga insurance
 # Set size of scope?
+#   WIll need size in scope
+#   Could deactivate scale rule to avoid confunsion
+#   This has no effect on instantiate (does it?) don't want to think about fitting stuff in the scope
+#   Should be able to use size coords as parameter
+#   For what?
+#   "fac(h) : h > 9 ; floor(h/3) floor(h/3) floor(h/3)"
+#   Seems symbols need to have parameters, and that does make sense
+#   would like concrete example...
+#   Fractals! Parameters going down for iteration control wihtout stupid string workarounds
 # Subdivision
 # Relative size values
 #   Relativity seems to be computed as all the relative ones share the same cake, after the absoutes have eaten
@@ -35,26 +46,37 @@ rules = [
         "id": "rule1",
         "pred": "koob",
         "effect": lambda o : [
+            (Symbol, "V", { "level" : 2 }),
+            ]
+    }, {
+        "id": "rule2",
+        "pred": "V",
+        "cond": lambda o : GET(o, "level") > 0,
+        "effect": lambda o : [
             Push,
-            (Translate, Vector((3,0,0))),
-            (Instantiate, "Cube"),
+            (Translate, Vector((GET(o, "level")*3,0,0))),
+            (Symbol, "V", { "level" : GET(o, "level")-1 }),
             Pop,
             Push,
-            (Translate, Vector((-2,0,0))),
-            (Instantiate, "Cube"),
+            (Translate, Vector((-GET(o, "level")*3,0,0))),
+            (Symbol, "V", { "level" : GET(o, "level")-1 }),
             Pop,
-            (RotZ, 45),
             Push,
-            (Translate, Vector((1,3,0))),
-            (Instantiate, "Cube"),
+            (Translate, Vector((0, GET(o, "level")*3,0))),
+            (Symbol, "V", { "level" : GET(o, "level")-1 }),
             Pop,
-            (Scale, Vector((1, 1, 2))),
             Push,
-            (Translate, Vector((0,-3,0))),
-            (Instantiate, "Cube"),
+            (Translate, Vector((0, -GET(o, "level")*3,0))),
+            (Symbol, "V", { "level" : GET(o, "level")-1 }),
             Pop,
-            ],
-        "cond": lambda o : o.location.x > 5
+            ]
+    }, {
+        "id": "rule3",
+        "pred": "V",
+        "cond": lambda o : GET(o, "level") == 0,
+        "effect": lambda o : [
+            (Instantiate, "Cube"),
+            ]
     }
 ]
 
@@ -75,6 +97,10 @@ state = {
 }
 
 stack = []
+
+def GET(o, param_name):
+    name_safe = "CGA_" + param_name
+    return o[name_safe]
 
 def new_obj(name):
     o = bpy.data.objects.new(name, None)
@@ -115,11 +141,17 @@ def extract_state(obj):
             "transform": copy.deepcopy(obj.matrix_world)
     }
 
-def Nonterminal(name):
+def Symbol(name, data):
     global inp
     global state
     o = new_obj("symbol")
     set_symbol(o, name)
+    if data:
+        for k, v in data.items():
+            assert(k != "symbol")
+            k_safe = "CGA_" + k
+            o[k_safe] = v
+
     apply_state(o)
     o.parent = inp
 
@@ -207,7 +239,7 @@ def ApplyOne():
         for o in inp.children:
             symb = get_symbol(o)
             print("Child symbol: " + symb)
-            if symb == p and r["cond"](o):
+            if symb == p and (("cond" not in r) or r["cond"](o)):
                 ApplyRule(r, o)
                 return True
             else:
