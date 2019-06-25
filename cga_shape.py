@@ -1,11 +1,18 @@
 import bpy
 import bmesh
+import copy
 from time import time
 from statistics import mean
 from mathutils import Vector
 
 DIMS = range(3)
 inp = None
+
+state = {
+        "translation": Vector((0,0,0))
+}
+
+stack = []
 
 def processa_malla(me):
     pass
@@ -21,7 +28,24 @@ def Instantiate(name):
     select(obj)
     bpy.ops.object.duplicate()
     cpy = bpy.context.scene.objects.active
+    cpy.location = state["translation"]
     cpy.parent = inp
+
+def Push():
+    global stack
+    global state
+    stack.append(copy.deepcopy(state))
+
+def Pop():
+    global stack
+    global state
+    assert(len(stack) >= 1)
+    state = stack.pop()
+
+# Accepts a vector
+def Translate(dCoords):
+    state["translation"] += dCoords
+
 
     
 # Ok, so hoow this is gonna work is,
@@ -34,9 +58,21 @@ def main():
     # Retrieve the active object (the last one selected)
     inp = bpy.data.objects["CGA_INPUT"]
     assert(inp != None)
-    inst = bpy.data.objects["CGA_INST"]
-    assert(inst != None)
 
+    Push()
+    Instantiate("Cube");
+    Translate(Vector((3,0,0)))
+    Instantiate("Cube");
+    Translate(Vector((3,0,0)))
+    Instantiate("Cube");
+    Pop()
+    print(state["translation"].x)
+    assert(state["translation"].x == 0)
+    Translate(Vector((0,3,0)))
+    Instantiate("Cube");
+    Translate(Vector((3,0,0)))
+    Instantiate("Cube");
+    Translate(Vector((3,0,0)))
     Instantiate("Cube");
 
     # Get current time
