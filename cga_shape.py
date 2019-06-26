@@ -18,6 +18,7 @@ from mathutils import Vector, Matrix
 #   Because see default cube is actually size 2...
 # Data in the subdivs?
 # Document size stuff
+
     
 
 # NOTES
@@ -34,6 +35,10 @@ from mathutils import Vector, Matrix
 #   So setting absolute size instead of scale might be valuable...
 #   They're also necessary for then computing relative values off of them
 
+# Fuck it blender has super weird scale handling we're just keeping scale at identity all the time and thats that
+# In terminals we can set their scale to respect scope or something if we want but &tra
+
+# Inverting is out if order so it kind would make sene that it's wrong
 
 #####################################################
 ### RULES AREA
@@ -73,8 +78,7 @@ rules = [
         "id": "rule3",
         "pred": "F",
         "effect": lambda o : [
-            (Translate, get_size(o)/2),
-            (Scale, get_size(o)),
+            (Scale, get_size(o)/10),
             (Instantiate, "Cube"),
             ]
     }
@@ -132,7 +136,6 @@ def duplicate(obj):
     return get_active()
 
 def set_symbol(obj, s):
-    print(s)
     assert(type(s) == str)
     obj["symbol"] = s
 
@@ -161,14 +164,24 @@ def cpy(x):
 
 def apply_state(obj):
     global state
-    obj.matrix_world = copy.deepcopy(state["transform"])
+    #obj.matrix_world = copy.deepcopy(state["transform"])
+
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = state["transform"].to_quaternion()
+    obj.location = state["transform"].to_translation()
+    #obj.matrix_world = copy.deepcopy(state["transform"])
+    print("wrote matrix", obj.matrix_world.to_euler())
+    print("wrote object", obj.rotation_euler)
+    print("wroteQ matrix", obj.matrix_world.to_quaternion().to_euler())
+    print("wroteQ object", obj.rotation_quaternion)
     set_size(obj, copy.deepcopy(state["size"]))
 
 def extract_state(obj):
-    return {
-            "transform": copy.deepcopy(obj.matrix_world),
+    st = {
+            "transform": Matrix.Translation(obj.location) * obj.rotation_quaternion.to_matrix().to_4x4(),
             "size" : get_size(obj)
     }
+    return st
 
 def Symbol(name, data = {}):
     global inp
@@ -180,7 +193,6 @@ def Symbol(name, data = {}):
             assert(k != "symbol")
             k_safe = "CGAU_" + k
             o[k_safe] = v
-
     apply_state(o)
     o.parent = inp
 
@@ -189,6 +201,10 @@ def Instantiate(name):
     assert(obj != None)
     cpy = duplicate(obj)
     apply_state(cpy)
+    print("INST", state["transform"].to_euler())
+    print(cpy.matrix_basis.to_euler())
+    print(cpy.matrix_world.to_euler())
+    print(cpy.rotation_euler)
     set_symbol(cpy, "TERMINAL")
     cpy.parent = inp
 
@@ -229,9 +245,6 @@ def Size(val):
 
 def absolutize(sizes, dim):
     sTot = state["size"][dim]
-    print("ABSOL")
-    print(sTot)
-    print(sizes)
     absSum = 0
     rSum = 0
     for size in sizes:
@@ -246,7 +259,6 @@ def absolutize(sizes, dim):
         if type(s) == tuple:
             sizes[i] = s[0]*(sTot - absSum)/rSum
     
-    print(sizes)
     return sizes
 
 
@@ -288,6 +300,18 @@ def Repeat(axis, size, name):
 
     Subdiv(axis, sizes, names)
 
+# I just want to make the right matrix for popping things in.
+# It should have the translation I give it, and the rotation so that z is pointing in the direction of the notmal
+def makeMatrix(location, normal):
+    t = Matrix.Translation(location)
+
+    up = Vector((0,0,1))
+    rdiff = up.rotation_difference(normal)
+    print("RDIFF", rdiff)
+    dmat = rdiff.to_matrix().to_4x4()
+
+    return t * dmat
+
 def Comp(shape_type, param, name):
     # TODO use param
     global curr_obj
@@ -312,23 +336,8 @@ def Comp(shape_type, param, name):
 
             c = poly.center
             Push()
-            Translate(c - ob.location)
-
-            curr_trans = cpy(state["transform"])
-            up = Vector((0,0,1))
-            local_up = up * curr_trans
-            rot_diff = local_up.rotation_difference(n)
-            rdiff_mat = rot_diff.to_matrix()
-            rdiff_mat.resize_4x4()
-            new_trans = curr_trans * rdiff_mat
-            state["transform"] = cpy(new_trans)
-
-            # Ok, I think we should have the translation and roation down now...
-            # Thos still maaybe directly settin them would be better
-            # Oh right size!
-
+            state["transform"] = makeMatrix(c, n)
             Size((state["size"].x, state["size"].y, 0))
-
             Symbol(name)
             Pop()
 
@@ -363,7 +372,6 @@ def ApplyRule(r, obj):
     state = extract_state(obj)
 
     curr_obj = obj
-    print("STATE: ", state)
     instructions = r["effect"](obj)
     execute(instructions)
     curr_obj = None
@@ -377,15 +385,11 @@ def ApplyOne():
     global rules
     for r in rules:
         p = r["pred"]
-        print("RUle pred: ", p)
         for o in inp.children:
             symb = get_symbol(o)
-            print("Child symbol: ", symb)
             if symb == p and (("cond" not in r) or r["cond"](o)):
                 ApplyRule(r, o)
                 return True
-            else:
-                print(o.name)
     return False
 
 def prepare():
@@ -409,6 +413,7 @@ def prepare():
         return False
 
     for c in inp.children:
+        c.rotation_mode = "QUATERNION"
         set_symbol(c, c.name)
         set_size(c, Vector((10, 10, 10)))
     return True
