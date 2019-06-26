@@ -11,9 +11,12 @@ from mathutils import Vector, Matrix, Quaternion
 # floorpring ground truth
 #   How do we do this? This, and comps like "sidewalls" seems like they require some more syntactic stuff, need me to code it.
 #   Think starting with comp is the most reasonable tho
+# Could stay with only faces right now
+# Tho would be nice with sidefaces
 # Roofs
-# Extrusion (implicit?)
+# Hmmm
 # Textures
+# HMMMMMMMMMMMMMMMMM
 # Parametric primitives? 
 #   Because see default cube is actually size 2...
 # Data in the subdivs?
@@ -49,7 +52,7 @@ rules = [
         "effect": lambda o : [
             #(Subdiv, "Y", [r(1),1, 1, r(1)], ["F", "F", "F", "F"]),
             #(Repeat, "Y", 3, "F"),
-            (Comp, "faces", 3, "F"),
+            (Comp, "sideedges", 3, "F"),
 #            (Symbol, "V", { "level" : 0 }),
             ]
     }, {
@@ -78,7 +81,8 @@ rules = [
         "id": "rule3",
         "pred": "F",
         "effect": lambda o : [
-            (Scale, get_size(o)/10),
+            (Size, (get_size(o).x, get_size(o).y, 1)),
+            (Scale,(get_size(o).x/10, get_size(o).y/10, 1)),
             (Instantiate, "Cube"),
             ]
     }
@@ -301,7 +305,6 @@ def Comp(shape_type, param, name):
         if not ob or ob.type != 'MESH':
             print(ob)
             assert(False)
-            return
         # If we are in edit mode, return to object mode
         bpy.ops.object.mode_set(mode='OBJECT')
         # Retrieve the mesh data
@@ -322,6 +325,35 @@ def Comp(shape_type, param, name):
             Size((state["size"].x, state["size"].y, 0))
             Symbol(name)
             Pop()
+    if shape_type == "sideedges":
+        if not ob or ob.type != 'MESH':
+            print(ob)
+            assert(False)
+        # If we are in edit mode, return to object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        mesh = ob.data
+        edges = mesh.edges
+
+        for edge in edges:
+            v1 = Vector(mesh.vertices[edge.vertices[0]].co)
+            v2 = Vector(mesh.vertices[edge.vertices[1]].co)
+
+            # Assuming flat
+            direction = Vector(v2) - Vector(v1)
+            angle = Vector((1,0,0)).angle(direction)
+            rot = Quaternion((0, 0, 1), angle)
+            #rot = .rotation_difference(direction)
+            print("RDIFF: ", rot, rot.angle, rot.axis)
+            c = v1/2+v2/2
+
+            Push()
+            state["location"] = cpy(c)
+            state["rotation"] = cpy(rot)
+            Size((state["size"].x, 0, 0))
+            Symbol(name)
+            Pop()
+
+
 
 
 def execute(instructions):
