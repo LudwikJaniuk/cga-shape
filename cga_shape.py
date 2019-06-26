@@ -4,7 +4,7 @@ import copy
 from math import radians
 from time import time
 from statistics import mean
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Quaternion
 
 # TODO
 # Comp
@@ -78,7 +78,7 @@ rules = [
         "id": "rule3",
         "pred": "F",
         "effect": lambda o : [
-            (Scale, get_size(o)/10),
+            #(Scale, get_size(o)/10),
             (Instantiate, "Cube"),
             ]
     }
@@ -93,12 +93,8 @@ inac = None
 curr_obj = None
 
 state = {
-        "translation": Vector((0,0,0)),
-        "rot_x": 0,
-        "rot_y": 0, 
-        "rot_z": 0,
-        "scale": Vector((1,1,1)),
-        "transform": Matrix(),
+        "location": Vector((0,0,0)),
+        "rotation": Quaternion((1,0,0), 0),
         "size": Vector((1,1,1)),
 }
 
@@ -164,21 +160,17 @@ def cpy(x):
 
 def apply_state(obj):
     global state
-    #obj.matrix_world = copy.deepcopy(state["transform"])
 
     obj.rotation_mode = "QUATERNION"
-    obj.rotation_quaternion = state["transform"].to_quaternion()
-    obj.location = state["transform"].to_translation()
-    #obj.matrix_world = copy.deepcopy(state["transform"])
-    print("wrote matrix", obj.matrix_world.to_euler())
-    print("wrote object", obj.rotation_euler)
-    print("wroteQ matrix", obj.matrix_world.to_quaternion().to_euler())
-    print("wroteQ object", obj.rotation_quaternion)
+    obj.rotation_quaternion = cpy(state["rotation"])
+    obj.location = cpy(state["location"])
+
     set_size(obj, copy.deepcopy(state["size"]))
 
 def extract_state(obj):
     st = {
-            "transform": Matrix.Translation(obj.location) * obj.rotation_quaternion.to_matrix().to_4x4(),
+            "location": cpy(obj.location),
+            "rotation": cpy(obj.rotation_quaternion),
             "size" : get_size(obj)
     }
     return st
@@ -201,10 +193,6 @@ def Instantiate(name):
     assert(obj != None)
     cpy = duplicate(obj)
     apply_state(cpy)
-    print("INST", state["transform"].to_euler())
-    print(cpy.matrix_basis.to_euler())
-    print(cpy.matrix_world.to_euler())
-    print(cpy.rotation_euler)
     set_symbol(cpy, "TERMINAL")
     cpy.parent = inp
 
@@ -221,24 +209,23 @@ def Pop():
 
 # Accepts a vector
 def Translate(dCoords):
-    d = Matrix.Translation(Vector(dCoords))
-    state["transform"] *= d
+    state["location"] += dCoords
 
 def RotX(delta):
-    d = Matrix.Rotation(radians(delta), 4, "X")
-    state["transform"] *= d
+    q = Quaternion((1, 0, 0), radians(delta))
+    state["rotation"] *= d
 
 def RotY(delta):
-    d = Matrix.Rotation(radians(delta), 4, "Y")
-    state["transform"] *= d
+    q = Quaternion((0, 1, 0), radians(delta))
+    state["rotation"] *= d
 
 def RotZ(delta):
-    d = Matrix.Rotation(radians(delta), 4, "Z")
-    state["transform"] *= d
+    q = Quaternion((0, 0, 1), radians(delta))
+    state["rotation"] *= d
 
-def Scale(mult):
-    d = Matrix.Scale(mult[0], 4, Vector((1, 0, 0))) * Matrix.Scale(mult[1], 4, Vector((0, 1, 0))) * Matrix.Scale(mult[2], 4, Vector((0, 0, 1)))
-    state["transform"] *= d
+#def Scale(mult):
+#    d = Matrix.Scale(mult[0], 4, Vector((1, 0, 0))) * Matrix.Scale(mult[1], 4, Vector((0, 1, 0))) * Matrix.Scale(mult[2], 4, Vector((0, 0, 1)))
+#    state["transform"] *= d
 
 def Size(val):
     state["size"] = copy.deepcopy(Vector(val))
@@ -336,7 +323,10 @@ def Comp(shape_type, param, name):
 
             c = poly.center
             Push()
-            state["transform"] = makeMatrix(c, n)
+            state["location"] = cpy(c)
+            up = Vector((0,0,1))
+            rdiff = up.rotation_difference(n)
+            state["rotation"] = cpy(rdiff)
             Size((state["size"].x, state["size"].y, 0))
             Symbol(name)
             Pop()
