@@ -7,8 +7,11 @@ from statistics import mean
 from mathutils import Vector, Matrix
 
 # TODO
-# Roofs
 # Comp
+# floorpring ground truth
+#   How do we do this? This, and comps like "sidewalls" seems like they require some more syntactic stuff, need me to code it.
+#   Think starting with comp is the most reasonable tho
+# Roofs
 # Extrusion (implicit?)
 # Textures
 # Parametric primitives? 
@@ -40,7 +43,8 @@ rules = [
         "pred": "koob",
         "effect": lambda o : [
             #(Subdiv, "Y", [r(1),1, 1, r(1)], ["F", "F", "F", "F"]),
-            (Repeat, "Y", 3, "F"),
+            #(Repeat, "Y", 3, "F"),
+            (Comp, "faces", 3, "F"),
 #            (Symbol, "V", { "level" : 0 }),
             ]
     }, {
@@ -82,6 +86,7 @@ rules = [
 DIMS = range(3)
 inp = None
 inac = None
+curr_obj = None
 
 state = {
         "translation": Vector((0,0,0)),
@@ -151,6 +156,9 @@ def d_l2n(letter):
             return 2
     assert(False)
 
+def cpy(x):
+    return copy.deepcopy(x)
+
 def apply_state(obj):
     global state
     obj.matrix_world = copy.deepcopy(state["transform"])
@@ -162,7 +170,7 @@ def extract_state(obj):
             "size" : get_size(obj)
     }
 
-def Symbol(name, data):
+def Symbol(name, data = {}):
     global inp
     global state
     o = new_obj("symbol")
@@ -197,7 +205,7 @@ def Pop():
 
 # Accepts a vector
 def Translate(dCoords):
-    d = Matrix.Translation(dCoords)
+    d = Matrix.Translation(Vector(dCoords))
     state["transform"] *= d
 
 def RotX(delta):
@@ -217,7 +225,7 @@ def Scale(mult):
     state["transform"] *= d
 
 def Size(val):
-    state["size"] = copy.deepcopy(val)
+    state["size"] = copy.deepcopy(Vector(val))
 
 def absolutize(sizes, dim):
     sTot = state["size"][dim]
@@ -262,7 +270,7 @@ def Subdiv(axis, sizes, names):
         t[dim] = cum_size
         Translate(t)
 
-        Symbol(name, {})
+        Symbol(name)
         Pop()
 
         cum_size += size
@@ -279,6 +287,50 @@ def Repeat(axis, size, name):
         names.append(name)
 
     Subdiv(axis, sizes, names)
+
+def Comp(shape_type, param, name):
+    # TODO use param
+    global curr_obj
+    ob = curr_obj
+
+    if shape_type == "faces":
+        # Check that it is indeed a mesh
+        if not ob or ob.type != 'MESH':
+            print(ob)
+            assert(False)
+            return
+        # If we are in edit mode, return to object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        # Retrieve the mesh data
+        mesh = ob.data
+        polys = mesh.polygons
+
+        for poly in polys:
+            n = poly.normal
+            verts = [mesh.vertices[i] for i in poly.vertices]
+            # TODO use
+
+            c = poly.center
+            Push()
+            Translate(c - ob.location)
+
+            curr_trans = cpy(state["transform"])
+            up = Vector((0,0,1))
+            local_up = up * curr_trans
+            rot_diff = local_up.rotation_difference(n)
+            rdiff_mat = rot_diff.to_matrix()
+            rdiff_mat.resize_4x4()
+            new_trans = curr_trans * rdiff_mat
+            state["transform"] = cpy(new_trans)
+
+            # Ok, I think we should have the translation and roation down now...
+            # Thos still maaybe directly settin them would be better
+            # Oh right size!
+
+            Size((state["size"].x, state["size"].y, 0))
+
+            Symbol(name)
+            Pop()
 
 
 def execute(instructions):
@@ -303,14 +355,18 @@ def ApplyRule(r, obj):
     global inp
     global inac
     global state
+    global curr_obj
     assert(obj.parent == inp)
     assert(get_symbol(obj) == r["pred"])
 
     Push()
     state = extract_state(obj)
+
+    curr_obj = obj
     print("STATE: ", state)
     instructions = r["effect"](obj)
     execute(instructions)
+    curr_obj = None
     Pop()
 
     obj.parent = inac
