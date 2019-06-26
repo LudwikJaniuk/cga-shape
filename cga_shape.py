@@ -78,7 +78,7 @@ rules = [
         "id": "rule3",
         "pred": "F",
         "effect": lambda o : [
-            #(Scale, get_size(o)/10),
+            (Scale, get_size(o)/10),
             (Instantiate, "Cube"),
             ]
     }
@@ -95,6 +95,7 @@ curr_obj = None
 state = {
         "location": Vector((0,0,0)),
         "rotation": Quaternion((1,0,0), 0),
+        "scale": Vector((1,1,1)),
         "size": Vector((1,1,1)),
 }
 
@@ -164,6 +165,7 @@ def apply_state(obj):
     obj.rotation_mode = "QUATERNION"
     obj.rotation_quaternion = cpy(state["rotation"])
     obj.location = cpy(state["location"])
+    obj.scale = cpy(state["scale"])
 
     set_size(obj, copy.deepcopy(state["size"]))
 
@@ -171,6 +173,7 @@ def extract_state(obj):
     st = {
             "location": cpy(obj.location),
             "rotation": cpy(obj.rotation_quaternion),
+            "scale": cpy(obj.scale),
             "size" : get_size(obj)
     }
     return st
@@ -223,9 +226,10 @@ def RotZ(delta):
     q = Quaternion((0, 0, 1), radians(delta))
     state["rotation"] *= d
 
-#def Scale(mult):
-#    d = Matrix.Scale(mult[0], 4, Vector((1, 0, 0))) * Matrix.Scale(mult[1], 4, Vector((0, 1, 0))) * Matrix.Scale(mult[2], 4, Vector((0, 0, 1)))
-#    state["transform"] *= d
+def Scale(mult):
+    state["scale"][0] *= mult[0]
+    state["scale"][1] *= mult[1]
+    state["scale"][2] *= mult[2]
 
 def Size(val):
     state["size"] = copy.deepcopy(Vector(val))
@@ -286,18 +290,6 @@ def Repeat(axis, size, name):
         names.append(name)
 
     Subdiv(axis, sizes, names)
-
-# I just want to make the right matrix for popping things in.
-# It should have the translation I give it, and the rotation so that z is pointing in the direction of the notmal
-def makeMatrix(location, normal):
-    t = Matrix.Translation(location)
-
-    up = Vector((0,0,1))
-    rdiff = up.rotation_difference(normal)
-    print("RDIFF", rdiff)
-    dmat = rdiff.to_matrix().to_4x4()
-
-    return t * dmat
 
 def Comp(shape_type, param, name):
     # TODO use param
