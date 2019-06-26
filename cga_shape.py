@@ -7,7 +7,6 @@ from statistics import mean
 from mathutils import Vector, Matrix, Quaternion
 
 # TODO
-# Comp
 # floorpring ground truth
 #   How do we do this? This, and comps like "sidewalls" seems like they require some more syntactic stuff, need me to code it.
 #   Think starting with comp is the most reasonable tho
@@ -82,7 +81,7 @@ rules = [
         "pred": "F",
         "effect": lambda o : [
             (Size, (get_size(o).x, get_size(o).y, 1)),
-            (Scale,(get_size(o).x/10, get_size(o).y/10, 1)),
+            (Scale,(get_size(o).x/2, get_size(o).y/2, 1)),
             (Instantiate, "Cube"),
             ]
     }
@@ -340,8 +339,8 @@ def Comp(shape_type, param, name):
 
             # Assuming flat
             direction = Vector(v2) - Vector(v1)
-            angle = Vector((1,0,0)).angle(direction)
-            rot = Quaternion((0, 0, 1), angle)
+            angle = Vector((1,0)).angle_signed(Vector((direction.x, direction.y)))
+            rot = Quaternion((0, 0, 1), -angle)
             #rot = .rotation_difference(direction)
             print("RDIFF: ", rot, rot.angle, rot.axis)
             c = v1/2+v2/2
@@ -349,7 +348,7 @@ def Comp(shape_type, param, name):
             Push()
             state["location"] = cpy(c)
             state["rotation"] = cpy(rot)
-            Size((state["size"].x, 0, 0))
+            Size((direction.magnitude, 0, 0))
             Symbol(name)
             Pop()
 
